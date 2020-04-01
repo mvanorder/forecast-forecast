@@ -136,7 +136,7 @@ def load(data, code, client, database, collection):
         if 'reference_time' in data:
             filters = {'zipcode':code, 'instant':data['reference_time']}
         else:
-            filters = {'zipcode':code, 'instant':data['instant']}            
+            filters = {'zipcode':code, 'instant':data['instant']}
         if "Weather" in data:
             updates = {'$set': {'weather': data}} # add the weather to the instant document
         else:
