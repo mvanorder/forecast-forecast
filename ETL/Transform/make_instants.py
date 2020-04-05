@@ -127,8 +127,9 @@ def load_weather(data, client, database, collection):
     :param collection: the database collection to be used
     :type collection: str
     ''' 
+    global code
     # decide how to handle the loading process depending on where the document will be loaded.
-    if collection == 'instant' or collection == 'test_instants':
+    if collection == 'instant' or collection == 'test_instants' or collection == 'instants_temp':
         # set the appropriate database collections, filters and update types
         db = Database(client, database)
         col = Collection(db, collection)
@@ -137,11 +138,18 @@ def load_weather(data, client, database, collection):
             filters = {'zipcode':data['zipcode'], 'instant':data['reference_time']}
             data['time_to_instant'] = data.pop('reference_time') - data.pop('reception_time')
             data.pop('zipcode')
+        elif 'zipcode' not in data: #added for old data processing
+            filters = {'zipcode': code, 'instant':data['instant']} #added for old data processing
+            data['time_to_instant'] = data.pop('instant') - data.pop('reception_time') #added for old data processing
+            data.pop('zipcode') #added for old data processing
         else:
             filters = {'zipcode':data['zipcode'], 'instant':data['instant']}            
             data['time_to_instant'] = data.pop('instant') - data.pop('reception_time')
             data.pop('zipcode')
-        if "Weather" in data:
+        if 'Weather' in data:
+            if 'time_to_instant' not in data['Weather']: #added for old data processing
+                data['Weather']['time_to_instant'] = data['time_to_instant'] #added for old data processing
+                data['Weather'].pop('reference_time') #added for old data processing
             # add the weather and coordiantes to the instant document
             updates = {'$set': {'weather': data['Weather'], 'coordinates':data['coordinates']}}
         else:
@@ -181,28 +189,34 @@ def sort_casts(forecasts, client, database='OWM', collection='instant'):
 
 if __name__ == "__main__":
     client = Client(host=host, port=port)
-    # set the database and collection to pull from
-    database = "test"
+    # set the database and collection to pull from the database of choice
+    database = "OWM"
     collection = "forecasted"
     forecasts = find_data(client, database, collection)
     collection = "observed"
     observations = find_data(client, database, collection)
-    collection = 'test_instants' # set the collection to be updated
+    collection = 'instants_temp' # set the collection to be updated
     start = time.time()
     f, o = 0, 0
     sorted_casts = []
     sorted_obs = []
     # sort the forecasts into instants
-    for forecast in forecasts:
+    for forecast in forecasts[:450]:
         if f%1000 == 0:
             print(f)
         casts = forecast['weathers'] # use the weathers array from the forecast
+        if 'zipcode': #added for old data processing
+            code = forecast['zipcode'] #added for old data processing
+            reception_time = forecast['reception_time'] #added for old data processing
         for cast in casts:
+            if 'zipcode' not in cast: #added for old data processing
+                cast['zipcode'] = code #added for old data processing
+                cast['reception_time'] = reception_time #added for old data processing
             load_weather(cast, client, database=database, collection=collection)
         f+=1
         sorted_casts.append(forecast['_id'])
     # set the observations into their respective instants
-    for observation in observations:
+    for observation in observations[450:]:
         if o%1000 == 0:
             print(o)
         load_weather(observation, client, database=database, collection=collection)
@@ -215,3 +229,4 @@ if __name__ == "__main__":
     with open('sorted_obs_from_testdb.txt', 'w') as f:
         for entry in sorted_obs:
             f.write(str(entry)+'\n')
+    print('now move the documents to the archive collections')
