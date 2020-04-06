@@ -201,9 +201,9 @@ if __name__ == "__main__":
     sorted_casts = []
     sorted_obs = []
     # sort the forecasts into instants
-    for forecast in forecasts[:450]:
+    for forecast in forecasts:
         if f%1000 == 0:
-            print(f)
+            print(f'f={f}')
         casts = forecast['weathers'] # use the weathers array from the forecast
         if 'zipcode': #added for old data processing
             code = forecast['zipcode'] #added for old data processing
@@ -216,9 +216,9 @@ if __name__ == "__main__":
         f+=1
         sorted_casts.append(forecast['_id'])
     # set the observations into their respective instants
-    for observation in observations[450:]:
+    for observation in observations:
         if o%1000 == 0:
-            print(o)
+            print(f'o={o}')
         load_weather(observation, client, database=database, collection=collection)
         o+=1
         sorted_obs.append(observation['_id'])
