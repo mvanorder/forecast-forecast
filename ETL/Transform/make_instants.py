@@ -196,6 +196,9 @@ if __name__ == "__main__":
     for forecast in forecasts:
         if f%1000 == 0:
             print(f)
+            with open('sorted_casts_from_testdb.txt', 'w') as f:
+                for entry in sorted_casts:
+                    f.write(str(entry)+'\n')
         casts = forecast['weathers'] # use the weathers array from the forecast
         for cast in casts:
             load_weather(cast, client, database=database, collection=collection)
@@ -205,13 +208,10 @@ if __name__ == "__main__":
     for observation in observations:
         if o%1000 == 0:
             print(o)
+            with open('sorted_obs_from_testdb.txt', 'w') as f:
+                for entry in sorted_obs:
+                    f.write(str(entry)+'\n')
         load_weather(observation, client, database=database, collection=collection)
         o+=1
         sorted_obs.append(observation['_id'])
     print(f'{time.time()-start} seconds passed while sorting each weathers array and adding observations to instants')
-    with open('sorted_casts_from_testdb.txt', 'w') as f:
-        for entry in sorted_casts:
-            f.write(str(entry)+'\n')
-    with open('sorted_obs_from_testdb.txt', 'w') as f:
-        for entry in sorted_obs:
-            f.write(str(entry)+'\n')
