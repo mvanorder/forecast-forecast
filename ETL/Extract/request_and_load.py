@@ -89,12 +89,13 @@ def get_current_weather(code=None, coords=None):
     try:
         result = get_data_from_weather_api(owm, zipcode=code)
     except APICallTimeoutError:
-        owm
+        owm = owm_loohoo
     current = json.loads(result.to_JSON()) # the current weather for the given zipcode
     if code:
         current['zipcode'] = code
     current['coordinates'] = current['Location']['coordinates']
     current['instant'] = 10800*(current['Weather']['reference_time']//10800 + 1)
+    current['Weather']['time_to_instant'] = current['instant'] - current['Weather'].pop('reference_time')
     current.pop('Location')
     return current
 
@@ -118,13 +119,15 @@ def five_day(code=None, coords=None):
         forecast['coordinates'] = coords
     forecast.pop('Location')
     forecast.pop('interval')
-    reception_time = forecast.pop('reception_time') # this is going to be added to the weathers array
+    reception_time = forecast['reception_time'] # this is going to be added to the weathers array
     for cast in forecast['weathers']:
+        cast['zipcode'] = forecast['zipcode']
         cast['instant'] = cast.pop('reference_time')
         cast['reception_time'] = reception_time
     return forecast
 
-def load(data, client, database, collection):
+def load_og(data, client, database, collection):
+    # Legacy function...see load_weather() for loading needs
     ''' Load data to specified database collection. Also checks for a preexisting document with the same instant and zipcode, and updates
     it in the case that there was already one there.
 
@@ -158,6 +161,86 @@ def load(data, client, database, collection):
         except DuplicateKeyError:
             return(f'DuplicateKeyError, could not insert data into {collection}.')
 
+def load_weather(data, client, database, collection):
+    ''' Load data to specified database collection. This determines the appropriate way to process the load depending on the
+    collection to which it should be loaded. Data is expected to be a weather-type dictionary. When the collection is "instants"
+    the data is appended the specified object's forecasts array in the instants collection; when the collection is either
+    "forecasted" or "observed" the object is insterted uniquely to the specified collection. Also checks for a preexisting
+    document with the same instant and zipcode, then updates it in the case that there was already one there.
+
+    :param data: the dictionary created from the api calls
+    :type data: dict
+    :param client: a MongoClient instance
+    :type client: pymongo.MongoClient
+    :param database: the database to be used
+    :type database: str
+    :param collection: the database collection to be used
+    :type collection: str
+    ''' 
+    # decide how to handle the loading process depending on where the document will be loaded.
+    if collection == 'instant':
+        # set the appropriate database collections, filters and update types
+        db = Database(client, database)
+        col = Collection(db, collection)
+        # check for old version conditions
+        if 'reference_time' in data:
+            filters = {'zipcode':data['zipcode'], 'instant':data['reference_time']}
+            data['time_to_instant'] = data.pop('reference_time') - data.pop('reception_time')
+        else:
+            filters = {'zipcode':data['zipcode'], 'instant':data['instant']}            
+            data['time_to_instant'] = data.pop('instant') - data.pop('reception_time')
+        if "Weather" in data:
+            updates = {'$set': {'weather': data}} # add the weather to the instant document
+        else:
+            updates = {'$push': {'forecasts': data}} # append the forecast object to the forecasts list
+        try:
+            col.find_one_and_update(filters, updates,  upsert=True)
+        except DuplicateKeyError:
+            return(f'DuplicateKeyError, could not insert data into {collection}.')
+    elif collection == 'observed' or collection == 'forecasted':
+        db = Database(client, database)
+        col = Collection(db, collection)
+        try:
+            col.insert_one(data)
+        except DuplicateKeyError:
+            return(f'DuplicateKeyError, could not insert data into {collection}.')
+
+def request_and_load(codes):
+    ''' Request weather data from the OWM api. Transform and load that data into a database.
+    
+    :param codes: a list of zipcodes
+    :type codes: list of five-digit valid strings of US zip codes
+    '''
+    # Begin a timer for the process and run the request and load process.
+    start_start = time.time()
+    print(f'task began at {start_start}')
+    i, n = 0, 0 # i for counting zipcodes processed and n for counting API calls made; API calls limited to a maximum of 60/minute/apikey.
+    start_time = time.time()
+    for code in codes:
+        try:
+            current = get_current_weather(code)
+        except AttributeError:
+            print(f'got AttributeError while collecting current weather for {code}. Continuing to next code.')
+            continue
+        n+=1
+        load_weather(current, local_client, 'test', 'observed')
+        coords = current['coordinates']
+        try:
+            forecasts = five_day(code, coords=coords)
+        except AttributeError:
+            print(f'got AttributeError while collecting forecasts for {code}. Continuing to next code.')
+            continue
+        n+=1
+        load_weather(forecasts, local_client, 'test', 'forecasted')
+        # Wait for the next 60 second interval to resume making API calls
+        if n==120 and time.time()-start_time <= 60:
+            print(f'Waiting {60 - time.time() + start_time} seconds before resuming API calls.')
+            time.sleep(60 - time.time() + start_time)
+            start_time = time.time()
+            n = 0
+        i+=1
+    print(f'task took {time.time() -  start_start} seconds and processed {i} zipcodes')
+
 
 if __name__ == '__main__':
     # this try block is to deal with the switching back and forth between computers with different directory names
@@ -169,35 +252,6 @@ if __name__ == '__main__':
         directory = os.path.join(os.environ['HOME'], 'data', 'forecast-forecast')
         filename = os.path.join(directory, 'ETL', 'Extract', 'resources', 'success_zipsNC.csv')
         codes = read_list_from_file(filename)
-    codes = read_list_from_file(filename)
-    num_zips = len(codes)
-    start_start = time.time()
-    print(f'task began at {start_start}')
     local_client = MongoClient(host=host, port=port)
-    start_time = time.time()
-    i, n = 0, 0 # i for counting zipcodes processed and n for counting API calls made; API calls limited to a maximum of 60/minute/apikey.
-    for code in codes[10:100]:
-        try:
-            current = get_current_weather(code)
-        except AttributeError:
-            print(f'got AttributeError while collecting current weather for {code}. Continuing to next code.')
-            continue
-        n+=1
-        load(current, local_client, 'test', 'observed')
-        coords = current['coordinates']
-        try:
-            forecasts = five_day(code, coords=coords)
-        except AttributeError:
-            print(f'got AttributeError while collecting forecasts for {code}. Continuing to next code.')
-            continue
-        n+=1
-        load(forecasts, local_client, 'test', 'forecasted')
-        # Wait for the next 60 second interval to resume making API calls
-        if n==120 and time.time()-start_time <= 60:
-            print(f'Waiting {60 - time.time() + start_time} seconds before resuming API calls.')
-            time.sleep(60 - time.time() + start_time)
-            start_time = time.time()
-            n = 0
-        i+=1
+    request_and_load(codes[10:20])
     local_client.close()
-    print(f'task took {time.time() -  start_start} seconds and processed {i} zipcodes')
