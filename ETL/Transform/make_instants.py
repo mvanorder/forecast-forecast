@@ -127,6 +127,8 @@ def load_weather(data, client, database, collection):
     :param collection: the database collection to be used
     :type collection: str
     ''' 
+    global code #to help the function find the zipcode when old forecasted documents are being sorted
+
     # decide how to handle the loading process depending on where the document will be loaded.
     if collection == 'instant' or collection == 'test_instants':
         # set the appropriate database collections, filters and update types
@@ -137,13 +139,18 @@ def load_weather(data, client, database, collection):
             filters = {'zipcode':data['zipcode'], 'instant':data['reference_time']}
             data['time_to_instant'] = data.pop('reference_time') - data.pop('reception_time')
             data.pop('zipcode')
+        elif 'zipcode' not in data:
+            filters = {'zipcode':code, 'instant':data['instant']}            
+            data['time_to_instant'] = data.pop('instant') - data.pop('reception_time')
         else:
             filters = {'zipcode':data['zipcode'], 'instant':data['instant']}            
             data['time_to_instant'] = data.pop('instant') - data.pop('reception_time')
             data.pop('zipcode')
         if "Weather" in data:
-            # add the weather and coordiantes to the instant document
-            updates = {'$set': {'weather': data['Weather'], 'coordinates':data['coordinates']}}
+            data['Weather'].pop('reference_time')
+            data['Weather']['time_to_instant'] = data.pop('time_to_instant')
+            # add the weather, time_to_instant, coordiantes to the observation
+            updates = {'$set': {'weather': data['Weather'], 'coordinates': data['coordinates']}}
         else:
             updates = {'$push': {'forecasts': data}} # append the forecast object to the forecasts list
         try:
@@ -194,24 +201,25 @@ if __name__ == "__main__":
     sorted_obs = []
     # sort the forecasts into instants
     for forecast in forecasts:
-        if f%1000 == 0:
-            print(f)
-            with open('sorted_casts_from_testdb.txt', 'w') as f:
-                for entry in sorted_casts:
-                    f.write(str(entry)+'\n')
         casts = forecast['weathers'] # use the weathers array from the forecast
+        code = forecast['zipcode'] # so that there is a zipcode available when old forecasted documents are being sorted
         for cast in casts:
             load_weather(cast, client, database=database, collection=collection)
         f+=1
         sorted_casts.append(forecast['_id'])
+        if f%1000 == 0:
+            print(f'f={f}')
+            with open('sorted_casts_from_testdb.txt', 'w') as f:
+                for entry in sorted_casts:
+                    f.write(str(entry)+'\n')
     # set the observations into their respective instants
     for observation in observations:
-        if o%1000 == 0:
-            print(o)
-            with open('sorted_obs_from_testdb.txt', 'w') as f:
-                for entry in sorted_obs:
-                    f.write(str(entry)+'\n')
         load_weather(observation, client, database=database, collection=collection)
         o+=1
         sorted_obs.append(observation['_id'])
+        if o%1000 == 0:
+            print(f'o={o}')
+            with open('sorted_obs_from_testdb.txt', 'w') as f:
+                for entry in sorted_obs:
+                    f.write(str(entry)+'\n')
     print(f'{time.time()-start} seconds passed while sorting each weathers array and adding observations to instants')
