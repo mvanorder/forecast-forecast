@@ -187,7 +187,7 @@ def load_weather(data, client, database, collection):
     ''' 
     col = dbncol(client, collection, database=database)
     # decide how to handle the loading process depending on where the document will be loaded.
-    if collection == 'instant' or collection == 'test_instants':
+    if collection == 'instant' or collection == 'test_instants' or collection == 'instant_temp':
         # set the appropriate database collections, filters and update types
         if "Weather" in data:
             updates = {'$set': {'weather': data}} # add the weather to the instant document
@@ -229,8 +229,8 @@ def request_and_load(codes):
             print(f'got AttributeError while collecting forecasts for {code}. Continuing to next code.')
             continue
         n+=1
-        load_weather(current, local_client, 'test', 'obs_temp')
-        load_weather(forecasts, local_client, 'test', 'cast_temp')
+        load_weather(current, local_client, 'owmap', 'obs_temp')
+        load_weather(forecasts, local_client, 'owmap', 'cast_temp')
         
         # if the api request rate is greater than 60 just keep going. Otherwise check how many requests have been made
         # and if it's more than 120 start make_instants.
@@ -262,5 +262,5 @@ if __name__ == '__main__':
         filename = os.path.join(directory, 'ETL', 'Extract', 'resources', 'success_zipsNC.csv')
         codes = read_list_from_file(filename)
     local_client = MongoClient(host=host, port=port)
-    request_and_load(codes[:220])
+    request_and_load(codes)
     local_client.close()
