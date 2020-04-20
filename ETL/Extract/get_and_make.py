@@ -11,6 +11,7 @@ from config import OWM_API_key_loohoo as loohoo_key, OWM_API_key_masta as masta_
 from config import port, host, user, password, socket_path
 
 
+
 def get_and_make(codes):
     ''' Request weather data from the OWM api. Transform and load that data into a database.
     
@@ -40,8 +41,8 @@ def get_and_make(codes):
         load_weather(current, client, 'test', 'obs_temp')
         load_weather(forecasts, client, 'test', 'cast_temp')
         
-        # if the api request rate is greater than 60 just keep going. Otherwise check how many requests have been made
-        # and if it's more than 120 start make_instants.
+        # if the api request rate is less than 1/minute, just keep going. Otherwise check how many requests have been made
+        # and if it's more than 120 then you know that there start make_instants.
         if n/2 / (time.time()-start_time) <= 1:
             i+=1
             continue
