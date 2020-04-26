@@ -6,7 +6,11 @@ from pymongo.collection import Collection, ReturnDocument
 from pymongo.errors import ConnectionFailure, InvalidDocument, DuplicateKeyError, OperationFailure, ConfigurationError
 from urllib.parse import quote
 
+<<<<<<< HEAD
 from config import user, password, socket_path, host, port
+=======
+from Extract.config import user, password, socket_path, host, port
+>>>>>>> 86a79aa48f804f79b92d0a77feae1d1cd70ff33d
 
 ''' Useful functions for forecast-forecast specific operations '''
 
@@ -129,6 +133,7 @@ def copy_docs(col, destination_db, destination_col, filters={}, delete=False):
         print(f'MOVED docs from {col} to {destination}, that is {destination_db}.{destination_col}')
     else:
         print(f'COPIED docs in {col} to {destination}, that is {destination_db}.{destination_col}')
+<<<<<<< HEAD
 
 
 if __name__ == "__main__":
@@ -195,3 +200,5 @@ if __name__ == "__main__":
     #         f.write(post)
     
     
+=======
+>>>>>>> 86a79aa48f804f79b92d0a77feae1d1cd70ff33d

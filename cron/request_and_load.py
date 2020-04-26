@@ -60,6 +60,11 @@ def get_data_from_weather_api(owm, zipcode=None, coords=None):
             loc = zipcode or 'lat: {}, lon: {}'.format(coords['lat'], coords['lon'])
             print(f'Timeout error with {loc} on attempt {tries}... waiting 1 second then trying again')
             time.sleep(1)
+        except ValueError:
+            try:
+                print(result)
+            except:
+                print('valueError, then exception caught when trying to print result')
         tries += 1
     if tries == 4:
         print('tried 3 times without response; moving to the next step!')
@@ -158,14 +163,14 @@ def load_og(data, client, database, collection):
         updates = {'$push': {'forecasts': data}} # append the forecast object to the forecasts list
         try:
             # check to see if there is a document that fits the parameters. If there is, update it, if there isn't, upsert it
-            updated = col.find_one_and_update(filters, updates, upsert=True, return_document=ReturnDocument.AFTER)
+            col.find_one_and_update(filters, updates, upsert=True)
 #             col.find_one_and_update(filters, updates,  upsert=True)
             return
         except DuplicateKeyError:
             return(f'DuplicateKeyError, could not insert data into {collection}.')
     elif collection == 'observed' or collection == 'forecasted':
         try:
-            updated = col.insert_one(data)
+            col.insert_one(data)
         except DuplicateKeyError:
             return(f'DuplicateKeyError, could not insert data into {collection}.')
 
@@ -190,8 +195,10 @@ def load_weather(data, client, database, collection):
     if collection == 'instant' or collection == 'test_instants' or collection == 'instant_temp':
         # set the appropriate database collections, filters and update types
         if "Weather" in data:
-            updates = {'$set': {'weather': data}} # add the weather to the instant document
+            filters = {'zipcode':data['Weather'].pop('zipcode'), 'instant':data['Weather'].pop('instant')}            
+            updates = {'$set': {'weather': data['Weather']}}
         else:
+            filters = {'zipcode':data.pop('zipcode'), 'instant':data.pop('instant')}
             updates = {'$push': {'forecasts': data}} # append the forecast object to the forecasts list
         try:
             filters = {'zipcode':data.pop('zipcode'), 'instant':data.pop('instant')}
