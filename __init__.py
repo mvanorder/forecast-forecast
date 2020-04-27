@@ -1,10 +1,7 @@
+import pymongo
 from pymongo import MongoClient
-import pandas as pd
-import config
+from config import host, port, uri
+from ETL.db_ops import Client
 
-host = config.host
-port = config.port
-user =  config.user
-password = config.password
-socket = config.socket
-uri = config.uri
+client = Client(host, port)
+remote_client = Client(uri)

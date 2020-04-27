@@ -1,1 +1,0 @@
-from .reqest_and_load import request_amd_load
