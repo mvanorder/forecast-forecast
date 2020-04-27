@@ -1,10 +1,8 @@
-import time
 
 from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection, ReturnDocument
 from pymongo.errors import ConnectionFailure, InvalidDocument, DuplicateKeyError, OperationFailure, ConfigurationError
-from urllib.parse import quote
 
 <<<<<<< HEAD
 from config import user, password, socket_path, host, port
@@ -49,7 +47,7 @@ def Client(host=None, port=None, uri=None):
             print('connection made with local server, even though you asked for the remote server')
             return client
 
-def dbncol(client, collection, database='test'):
+def dbncol(client, collection, database=database):
     ''' Make a connection to the database and collection given in the arguments.
 
     :param client: a MongoClient instance
