@@ -1,12 +1,15 @@
+''' Useful functions for forecast-forecast specific operations '''
+
+import time
 
 from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection, ReturnDocument
 from pymongo.errors import ConnectionFailure, InvalidDocument, DuplicateKeyError, OperationFailure, ConfigurationError
+from urllib.parse import quote
 
-from Extract.config import user, password, socket_path, host, port
+# from config import user, password, socket_path, host, port
 
-''' Useful functions for forecast-forecast specific operations '''
 
 def Client(host=None, port=None, uri=None):
     ''' Create and return a pymongo MongoClient object. Connect with the given parameters if possible, switch to local if the
@@ -43,13 +46,13 @@ def Client(host=None, port=None, uri=None):
             print('connection made with local server, even though you asked for the remote server')
             return client
 
-def dbncol(client, collection, database):
+def dbncol(client, collection, database='test'):
     ''' Make a connection to the database and collection given in the arguments.
 
     :param client: a MongoClient instance
     :type client: pymongo.MongoClient
     :param database: the name of the database to be used. It must be a database name present at the client
-    :type database: str where default is 'test'
+    :type database: str
     :param collection: the database collection to be used.  It must be a collection name present in the database
     :type collection: str
     
@@ -127,3 +130,4 @@ def copy_docs(col, destination_db, destination_col, filters={}, delete=False):
         print(f'MOVED docs from {col} to {destination}, that is {destination_db}.{destination_col}')
     else:
         print(f'COPIED docs in {col} to {destination}, that is {destination_db}.{destination_col}')
+
