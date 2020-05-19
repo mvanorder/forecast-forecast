@@ -43,66 +43,65 @@ def check_db_access(client):
     client.close()
     return
 
-def Client(host=None, port=None, uri=None):
-    ### THIS IS NOT VERY VALUABLE AS A FUNCITON ###
-    ''' Create and return a pymongo MongoClient object. Connect with the given
-    parameters if possible, switch to local if the remote connection is not
-    possible, using the default host and port.
+def Client(uri):
+    ''' Create and return a pymongo MongoClient object. If the uri is given but
+    for whatever reason the MongoClient cannot be made, then revert to the local
+    instance of a MongoDB server.
     
-    :param host: the local host to be used. defaults within to localhost
-    :type host: sting
-    :param port: the local port to be used. defaults within to 27017
-    :type port: int
+    *** This function is most appropriately used for the remote client
+    connection using a proper uri; for local connections you should just use the
+    pymongo MongoClient() as is.
+    ***
+
     :param uri: the remote server URI. must be uri encoded
-    type uri: uri encoded sting'''
+    type uri: uri encoded sting
+    '''
     
-    if host and port:
-        try:
-            client = MongoClient(host=host, port=port)
-            check_db_access(client)
-            return client
-        except ConnectionFailure:
-            # connect to the remote server if a valid uri is given
-            if uri:
-                print('caught ConnectionFailure on local server. Trying to make it with remote')
-                client = MongoClient(uri)
-                print(f'established remote MongoClient on URI={uri}')
-                return client
-            print('caught ConnectionFailure on local server. Returning None')
-            return None
-    elif uri:
-        # verify that the connection with the remote server is active and switch to the local server if it's not
+    if uri:
         try:
             client = MongoClient(uri)
-            check_db_access(client)
             return client
-        except ConfigurationError:
-            print(f'Caught configurationError in client() for URI={uri}. It was likely triggered by a DNS timeout.')
+        except:
+            # Regardless of the error, print the error message and connect to the
+            # local MongoDB instance.
+            host = 'localhost'
+            port = 27017
             client = MongoClient(host=host, port=port)
-            print('connection made with local server, even though you asked for the remote server')
             return client
+    else:
+        try:
+            client = MongoClient(host=host, port=port)
+            return client
+        except ConnectionFailure:
+            print('caught ConnectionFailure on local server. Returning -1 flag')
+            return -1
     
 def dbncol(client, collection, database=database):
     ''' Make a connection to the database and collection given in the arguments.
 
     :param client: a MongoClient instance
     :type client: pymongo.MongoClient
-    :param database: the name of the database to be used. It must be a database name present at the client
+    :param database: the name of the database to be used. It must be a database
+    name present at the client
     :type database: str
-    :param collection: the database collection to be used.  It must be a collection name present in the database
+    :param collection: the database collection to be used.  It must be a
+    collection name present in the database
     :type collection: str
     
     :return col: the collection to be used
     :type: pymongo.collection.Collection
     '''
 
-    n=0
     try:
         db = Database(client, database)
+        print(f'dbncol created db without AttributeError using {client}.')
     except AttributeError:
+        print(f'dbncol caught AttributeError while trying to connect {client}.')
         from config import uri
+        print('trying to connect using MongoClient rather than my own Client()')
         client = MongoClient(uri)
         db = Database(client, database)
+        print('did it without issue.')
     col = Collection(db, collection)
     return col
 
@@ -176,4 +175,3 @@ def copy_docs(col, destination_db, destination_col, filters={}, delete=False):
         print(f'MOVED docs from {col} to {destination}.')
     else:
         print(f'COPIED docs in {col} to {destination}.')
-
