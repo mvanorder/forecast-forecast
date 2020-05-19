@@ -43,6 +43,7 @@ if __name__ == '__main__':
     
     print(dir())
     # Get the list of locations from the resources directory
+
     directory = os.path.join(os.environ['HOME'], 'data', 'forcast-forcast')
     filename = os.path.join(directory, 'ETL', 'Extract', 'resources', 'success_zipsNC.csv')
     if not os.path.isfile(filename):
@@ -53,6 +54,23 @@ if __name__ == '__main__':
             exit()
 
     codes = read_list_from_file(filename)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # Pull in all the documents from the db.instants database collection
     instants = load_instants_from_db()
     # Start pulling all the data from the weather API
@@ -67,8 +85,8 @@ if __name__ == '__main__':
     for code in codes:
         o = weather.get_current_weather(code)  # 'o' for observation
         n += 1
-        location = o.weather['Weather'].pop('location')  # You need the coordinate location
-                                                         # for five_day().
+        location = o.weather['Weather'].pop('location')  # This is needed for 
+                                                         # the five_day().
         weath = o.weather.pop('Weather')
         o.as_dict['weather'] = weath
         weather_list.append(o)
@@ -77,8 +95,9 @@ if __name__ == '__main__':
         for item in f:
             weather_list.append(item)
 
-            # if the api request rate is greater than 60 just keep going. Otherwise check how many requests have been made
-            # and if it's more than 120 start make_instants.
+            # If the api request rate is greater than 60 just keep going.
+            # Otherwise check how many requests have been made, and if it's more
+            # than 120 start make_instants.
             if n/2 / (time.time()-start_time) <= 1:
                 k+=1
                 continue
@@ -88,7 +107,8 @@ if __name__ == '__main__':
                     for i in weather_list:
                         i.to_inst(instants)
                     if time.time() - start_time < 60:
-                        print(f'Waiting {start_time+60 - time.time()} seconds before resuming API calls.')
+                        print(f'Waiting {start_time+60 - time.time()} seconds \
+                        before resuming API calls.')
                         time.sleep(start_time - time.time() + 60)
                         start_time = time.time()
                     n = 0
@@ -97,7 +117,7 @@ if __name__ == '__main__':
     try:
         for i in weather_list:
             i.to_inst()
-#         make_instants(client)
     except:
         print('No more documents to sort into instants')
-    print(f'task took {time.time() - start_start} seconds and processed {int(k/40)} zipcodes')
+    print(f'task took {time.time() - start_start} seconds and processed \
+    {int(k/40)} zipcodes')
