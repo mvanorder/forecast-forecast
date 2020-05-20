@@ -37,8 +37,8 @@ class Weather:
         # make the _id for each weather according to its reference time
         if _type == 'forecast' and 'reference_time' in data:
             self._id = f'{str(location)}{str(data["reference_time"])}'
-        elif _type == 'observation' and 'Weather' in data:
-            self._id = f'{str(location)}{str(10800 * (data["Weather"]["reference_time"]//10800 + 1))}'
+        elif _type == 'observation': #and 'Weather' in data:
+            self._id = f'{str(location)}{str(10800 * (data["reference_time"]//10800 + 1))}' #["Weather"]["reference_time"]//10800 + 1))}'
         self.as_dict = {'_id': self._id,
                        '_type': self.type,
                         'weather': self.weather
@@ -68,7 +68,7 @@ class Weather:
             return
 
 
-def get_data_from_weather_api(owm, location):
+def get_data_from_weather_api(owm, location, current=False):
     ''' Makes api calls for observations and forecasts and handles the API call
     errors.
 
@@ -77,17 +77,24 @@ def get_data_from_weather_api(owm, location):
     :param location: the coordinates or zipcode reference for the API call.
     :type location: if location is a zipcode, then type is a string;
     if location is a coordinates, then tuple or dict.
+    :param current: This determines if the coordinate location should be used
+    to get current or forecasted weather. The default is forecasted.
+    :type current: bool
 
     returns: the API data
     '''
-    
+        
     result = None
     tries = 1
     while result is None and tries < 4:
         try:
             if type(location) == dict:
-                result = owm.three_hours_forecast_at_coords(**location)
-                return result
+                if current:
+                    result = owm.weather_at_coords(**location)
+                    return result
+                else:
+                    result = owm.three_hours_forecast_at_coords(**location)
+                    return result
             elif type(location) == str:
                 result = owm.weather_at_zip_code(location, 'us')
                 return result
@@ -132,15 +139,18 @@ def get_current_weather(location):
     while m < 4:
         try:
             # get the raw data from the OWM and make a Weather from it
+            if type(location) == dict:
+                result = get_data_from_weather_api(owm, location, coords=location)
             result = get_data_from_weather_api(owm, location)
-            if result is -1:
+            if result == -1:
                 print(f'Did not get current weather for {location} and reset owm')
                 return result
             result = json.loads(result.to_JSON())  # the current weather for the given zipcode
-            result['Weather']['location'] = result['Location'].pop('coordinates')
+            coordinates = result['Location'].pop('coordinates')
+            result['Weather']['location'] = coordinates
             result.pop('reception_time')
             result.pop('Location')
-            weather = Weather(location, 'observation', result)
+            weather = Weather(coordinates, 'observation', result['Weather'])
             return weather
         except APICallTimeoutError:
             owm = owm_loohoo
