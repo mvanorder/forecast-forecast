@@ -213,6 +213,19 @@ def make_delta(cast, obs):
             continue
     return delta
 
+def doc_to_inst(doc):
+    ''' Take a document from the instants database and make an Instant object
+    out of it.
+    
+    :param doc: a document from the owmap.legit_inst database
+    :type doc: dictionary
+    '''
+    
+    _id = f"{doc['instant']}{doc['zipcode']}"
+    forecasts = doc['forecasts']
+    observations = doc['weather']
+    return Instant(_id, forecasts, observations)
+
 
 import time
 start_time = time.time() # This is to get the total runtime if this script is
