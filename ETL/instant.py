@@ -46,6 +46,16 @@ class Instant:
 
         col = dbncol(client, collection, database=database)
         col.update_one({'_id': self._id}, {'$set': self.as_dict}, upsert=True)
+        
+    def as_delta(self):
+        ''' Create an Instant delta object. It finds the delta between the 
+        observation and each forecast and returns a list of deltas. '''
+        
+        from delta import make_delta
+        
+        # Loop through the forecasts array and append the return of make_delta()
+        # to and deltas list before returning that list.
+        return [make_delta(cast, self.obs) for cast in self.casts]
 
     
 def cast_count_all(instants):
@@ -156,6 +166,65 @@ def load_legit(legit_list):
     # loaded to legit_inst.
 #     col.delete_many(legit_list)
     return
+
+def make_delta(cast, obs):
+    ''' Compare the values of two dicts, key by key. When the values are numbers
+    return the difference, when strings return 0 if the strings are equal and 1
+    if they are different, when dicts run this function, when NoneType set the
+    value to 99999.
+    
+    :params cast, obs: dictionaries with the same set of keys and sub-keys
+    :type cas, obs: dict
+    '''
+    
+    delta = {}  # The delta document. Contains all the forecast errors
+    
+    for (k, v) in cast.items():
+        try:
+            # Check and compare dictionaries according to their value type
+            if type(v) == int or type(v) == float:
+                if type(obs[k]) == int or type(obs[k]) == float:
+                    delta[k] = v - obs[k]
+                    continue
+            elif type(v) == dict:
+                delta[k] = make_delta(v, obs[k])
+                continue
+            elif type(v) == str:
+                if v == obs[k]:
+                    delta[k] = 0
+                else:
+                    delta[k] = 1
+            elif type(v):
+                delta[k] = 999999
+                continue
+            else:
+                print(f'there was some other condition not met by the other\
+                checks. Look at {k} and {v}')
+                continue
+        except KeyError as e:
+            print(f'Caught a KeyError..... {e}')
+            # Add whichever key and value needs adding to the delta
+            if k not in obs and '1h' in obs:
+                delta['1h'] = obs['1h']
+                delta[k] = v
+            elif k not in obs and '3h' in obs:
+                delta['3h'] = obs['3h']  
+                delta['1h'] = v
+            continue
+    return delta
+
+def doc_to_inst(doc):
+    ''' Take a document from the instants database and make an Instant object
+    out of it.
+    
+    :param doc: a document from the owmap.legit_inst database
+    :type doc: dictionary
+    '''
+    
+    _id = f"{doc['instant']}{doc['zipcode']}"
+    forecasts = doc['forecasts']
+    observations = doc['weather']
+    return Instant(_id, forecasts, observations)
 
 
 import time

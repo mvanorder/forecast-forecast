@@ -37,3 +37,34 @@ def all_keys(d):
         else:
             keys.append(str(key))
     return keys
+
+def compare_dicts(one, the_other):
+    ''' Compare the values of two dicts, key by common key. When the values are numbers
+    return the difference, when strings return 0 if the strings are equal and 1
+    if they are different, when dicts run this function, when NoneType set the
+    value to None.
+    *** When there is a key present in one and not the_other 
+    :params one, the_other: dictionaries with the same set of keys and sub-keys
+    :type one, the_other: dict
+    '''
+    
+    delta = {}  # The delta document. Contains all the forecast errors
+    
+    for (k, v) in one.items():
+        try:
+            # Check and compare dictionaries according to their value type
+            if type(v) == int or type(v) == float:
+                if type(the_other[k]) == int or type(the_other[k]) == float:
+                    delta[k] = v - the_other[k]
+            elif type(v) == dict:
+                delta[k] = make_delta(v, the_other[k])
+            elif type(v) == str:
+                if v == the_other[k]:
+                    delta[k] = 0
+                else:
+                    delta[k] = 1
+            elif type(v):
+                delta[k] = None
+        except KeyError as e:
+            print(f'missing key..... {e}')
+    return delta
