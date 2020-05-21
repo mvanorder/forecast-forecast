@@ -19,7 +19,8 @@ class Fdiff:#(cast, obs):
 
 
 def make_delta(cast, obs):
-    ''' Compare the values of two dicts, key by key. When the values are numbers
+    ''' MODIFIED FROM OVERALLS.COMPARE_DICTS()
+    Compare the values of two dicts, key by key. When the values are numbers
     return the difference, when strings return 0 if the strings are equal and 1
     if they are different, when dicts run this function, when NoneType set the
     value to 99999.
@@ -36,10 +37,8 @@ def make_delta(cast, obs):
             if type(v) == int or type(v) == float:
                 if type(obs[k]) == int or type(obs[k]) == float:
                     delta[k] = v - obs[k]
-                    continue
             elif type(v) == dict:
                 delta[k] = make_delta(v, obs[k])
-                continue
             elif type(v) == str:
                 if v == obs[k]:
                     delta[k] = 0
@@ -47,13 +46,9 @@ def make_delta(cast, obs):
                     delta[k] = 1
             elif type(v):
                 delta[k] = 999999
-                continue
-            else:
-                print(f'there was some other condition not met by the other\
-                checks. Look at {k} and {v}')
-                continue
         except KeyError as e:
             print(f'Caught a KeyError..... {e}')
+################### Modified from compare_dicts() in overalls.py ##############
             # Add whichever key and value needs adding to the delta
             if k not in obs and '1h' in obs:
                 delta['1h'] = obs['1h']
@@ -61,5 +56,5 @@ def make_delta(cast, obs):
             elif k not in obs and '3h' in obs:
                 delta['3h'] = obs['3h']  
                 delta['1h'] = v
-            continue
+###############################################################################
     return delta
