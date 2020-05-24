@@ -17,7 +17,7 @@ from pymongo.errors import DuplicateKeyError, ConfigurationError
 from urllib.parse import quote
 
 from config import user, password, socket_path
-from ETL.db_ops import Client
+# from ETL.db_ops import Client
 
 
 # use the local host and port for all the primary operations
@@ -314,5 +314,5 @@ def make_instants(client):
     copy_docs(obs_col, database, 'obs_archive', delete=True)
 
 
-client = MongoClient(host=host, port=port)
-remote_client = Client(uri)
+# client = MongoClient(host=host, port=port)
+# remote_client = Client(uri)
