@@ -57,7 +57,7 @@ def compare_dicts(one, the_other):
                 if type(the_other[k]) == int or type(the_other[k]) == float:
                     delta[k] = v - the_other[k]
             elif type(v) == dict:
-                delta[k] = make_delta(v, the_other[k])
+                delta[k] = compare_dicts(v, the_other[k])
             elif type(v) == str:
                 if v == the_other[k]:
                     delta[k] = 0
@@ -66,5 +66,6 @@ def compare_dicts(one, the_other):
             elif type(v):
                 delta[k] = None
         except KeyError as e:
+            print()
             print(f'missing key..... {e}')
     return delta
