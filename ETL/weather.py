@@ -55,6 +55,7 @@ class Weather:
         :type _type: string  It must be either 'observation' or 'forecast'
         '''
 
+        # Create a default weather dict and update it with data.
         weather = {
             '_id': 'DEFAULT',
             'clouds': 'DEFAULT',
@@ -84,15 +85,19 @@ class Weather:
             'heat_index': 'DEFAULT',
             'time_to_instant': 'DEFAULT'
         }
+        weather.update(data)
+        
         self.type = _type
         self.loc = location
         # Define the weather data structure
-        self.weather = weather.update(data)
+        self.weather = weather#.update(data)
         # make the _id for each weather according to its reference time
         if _type == 'forecast' and 'reference_time' in data:
             self._id = f'{str(location)}{str(data["reference_time"])}'
-        elif _type == 'observation': #and 'Weather' in data:
+        elif _type == 'observation' and 'Weather' in data:
             self._id = f'{str(location)}{str(10800 * (data["reference_time"]//10800 + 1))}' #["Weather"]["reference_time"]//10800 + 1))}'
+        else:
+            self._id = weather['_id']    
         self.as_dict = {'_id': self._id,
                        '_type': self.type,
                         'weather': self.weather
